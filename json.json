@@ -1,0 +1,27 @@
+{
+    "accounts": {
+        "total": "3,928.32",
+        "totalbtc": "0.0000",
+        "list": [{"
+        aid ":493270,"
+        apass ":"
+        eFSqmKrO ","
+        bankip ":"
+        19.38 .42 .12 ","
+        primary_account ":"
+        yes ","
+        money ":"
+        3,
+        928.32 "}],
+        "listbtc": "[{"
+        address ":"
+        mKY1kpR8kzn5mPgujr51dYuKT2jE3PQP6h ","
+        private_key ":"
+        5 a09c2eb54d553043bba32ba64a1a4af93631a84d56eb6accb94b7ec3d4ee ","
+        bankip ":"
+        19.38 .42 .12 ","
+        bitcoin ":"
+        0.0000 "}]",
+        "conversion": "6,510.1275"
+    }
+}
