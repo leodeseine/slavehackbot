@@ -1,146 +1,173 @@
 #!/usr/bin/python3
  
  
-import sys
-import requests
 import time
 import random
 import json
 import threading
-
+import configparser
 from slave_api import SlaveApi
  
-Cookie="u262j1g08l49drdjohobvrlq65" # set your cookie heres
-UserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.77 Safari/537.36"
-very='cvvw45yvj' # Normally doesn't change
-csrf='1f5b56d4d04a377f8913455f17036f8b' # get your token in the html or request header
-PAUSE = 0.5
-ANTIBAN_PAUSE = 4
+config = configparser.ConfigParser()
+config.read('configuration.ini')
 
+Cookie=str(config['DEFAULT']['Cookie'])
+UserAgent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.77 Safari/537.36'
+very=str(config['DEFAULT']['very'])
+csrf=str(config['DEFAULT']['csrf'])
 
-def game_loop(sApi,player_data):
+PAUSE_UPDATE = float(config['DEFAULT']['PAUSE_UPDATE'])
+ANTIBAN_PAUSE = float(config['DEFAULT']['ANTIBAN_PAUSE'])
+MIN_MISSION = int(config['DEFAULT']['MIN_MISSION'])
+MAX_MISSION =int(config['DEFAULT']['MAX_MISSION'])
+
+def start_delete_mission(sApi,mission_id):
+    mission = sApi.start_mission(mission_id).replace('\\','')
+    mission_content = mission[mission.index('"content":"')+11:-2]
+    mission_data = json.loads(mission_content)
+    current_mission = mission_data[0]
+
+    print('Starting mission %s:' % current_mission['id'])
+    print('\tSubject\t: %s' % current_mission['subject'])
+    print('\tTarget\t: %s' % current_mission['target'])
+    print('\tFile\t: %s' % current_mission['expect'])
+    print('\tPayout\t: %s$' % current_mission['payout'])
+    print('-------------------------\n')
+    return current_mission
+
+def target_is_slave(npc_slaves,target_ip):
+    for slave in npc_slaves:
+        if (slave['ip'] == target_ip):
+            print("Target (%s) is already a slave." % target_ip)
+            return True
+    return False
+
+def end_process(pid,process_name):
+    sApi.end_process(pid)
+    print("Process %s (%s) has been terminated"%(process_name,pid))
+
+def get_process_data(sApi,process_id):
     while True:
-            pass
-            #lancer la mission
-            mission_id = random.randint(1,10)
-            mission = sApi.start_mission(mission_id).replace('\\','')
-            print('-- Mission --')
-            print(mission)
-            print('-------------')
-            mission_content = mission[mission.index('"content":"')+11:-2]
-            mission_data = json.loads(mission_content)
-            current_mission = mission_data[0]
-            print('starting mission %s' %(current_mission['id']))
-            #la victime n'est pas dans mes slaves ?
-            already_slave = False
-            for slave in player_data['npc_slaves']:
-                if (slave['ip'] == current_mission['target']):
-                    print("target (%s) is already a slave ... "%current_mission['target'])
-                    already_slave = True
-                    break
-            if not already_slave:
-                print("target (%s) is not a slave ... pulse it"%current_mission['target'])
-                #faire un pulse
-                pulse = sApi.pulse(current_mission['target']).replace('\\','')
-                process_id = pulse[pulse.find('terminal_process_')+17:-13]
-                print('pulse -> process id %s'%process_id)
-                while True:
-                    processes = sApi.get_processes().replace('\\','').replace('"[{"','[{"').replace('"}]"','"}]')
-                    if 'content":"[]"' in processes:
-                        time.sleep(1)
-                        continue
-                    processes_content = processes[processes.index('"content":')+10:-2]
-                    print('-- processes concent (pulse)')
-                    print(processes_content)
-                    print('--------------------------')
-                    processes_data_tab = json.loads(processes_content)
-                    processes_data = None
-                    for process in processes_data_tab:
-                        if str(process_id) == str(process['pid']):
-                            processes_data = process
-                            break
-                    if processes_data is None or str(process_id) != str(processes_data['pid']):
-                        time.sleep(1)
-                    else:
-                        break
-                #attendre
-                print("waiting %s s for adding slave %s"%(processes_data['timeleft'],current_mission['target']))
-                time.sleep(int(processes_data['timeleft'])+1)
-                #accepter
-                print('adding slave !')
-                print(sApi.end_process(processes_data['pid']))
-                time.sleep(1)
-                print('updating slaveslist ...')
-                slaveslist = sApi.slaveslist().replace('\\','')
-                slaveslist_content = slaveslist[slaveslist.index('"content":"')+11:-2]
-                slaveslist_data = json.loads(slaveslist_content)
-                player_data['npc_slaves'] = slaveslist_data['npcs']
-            
-            #se connecter
-            connect(sApi,current_mission['target'])
-            #supprimer le fichier nécessaire
-            print('send command to remove file %s'%current_mission['expect'])
-            remove_file = sApi.remove_file(current_mission['expect']).replace('\\','')
-            print(remove_file)
-            r_process_id = remove_file[remove_file.find('terminal_process_')+17:-13]
-            while True:
-                processes = sApi.get_processes().replace('\\','').replace('"[{"','[{"').replace('"}]"','"}]')
-                print(processes)
-                if 'content":"[]"' in processes:
-                    time.sleep(1)
-                    continue
-                print('-- processes (remove)')
-                print(processes)
-                print('--------------------------')                
-                processes_content = processes[processes.index('"content":')+10:-2]
-                print('-- process concent (remove)')
-                print(processes_content)
-                print('--------------------------')
-                processes_data_tab = json.loads(processes_content)
-                processes_data = None
-                for process in processes_data_tab:
-                    if str(r_process_id) == str(process['pid']):
-                        processes_data = process
-                        break
-                if processes_data is None or str(r_process_id) != str(processes_data['pid']):
-                    time.sleep(1)
-                else:
-                    break
-            #attendre
-            print("waiting %s s for removing file %s"%(processes_data['timeleft'],current_mission['expect']))
-            time.sleep(int(processes_data['timeleft'])+1)
-            #valider
-            sApi.end_process(processes_data['pid'])
+        processes = sApi.get_processes().replace('\\','').replace('"[{"','[{"').replace('"}]"','"}]')
+        if 'content":"[]"' in processes:
             time.sleep(1)
-            #valider la mission
-            sApi.end_mission(current_mission['id'])
-            print('Ending mission %s'%(current_mission['id']))
-            print('exit remote connection')
-            print(sApi.exit_connection())
-            print(sApi.notifications())
-            print('pausing a bit ... not souspicious ... plz do not ban')
-            time.sleep(ANTIBAN_PAUSE)
+            continue
+        processes_content = processes[processes.index('"content":')+10:-2]
+        processes_data_tab = json.loads(processes_content)
+        processes_data = None
+        [{"pid":1933933,"processnum":134,"processname":"Deleting","type":"CPU","object":"29dc2e22d.zip (20.8)","targetip":"150.120.26.74","timestart":"2018-08-18 10:47:27","timetotal":"8.9","timeleft":7.9,"percent":"11.24","done":0}]
+        for process in processes_data_tab:
+            if str(process_id) == str(process['pid']):
+                print("Found a process id matching (%s):"%process_id)
+                print("\tName\t\t: %s"%process['processname'])
+                print("\tType\t\t: %s"%process['type'])
+                print("\tObject\t\t: %s"%process['object'])
+                print("\tTarget\t\t: %s"%process['targetip'])
+                print("\tTime Left\t: %s"%process['timeleft'])
+                print('-------------------------')
+                processes_data = process
+                return processes_data
+        if processes_data is None or str(process_id) != str(processes_data['pid']):
+            time.sleep(1)
+        else:
+            return processes_data
 
-def update_loop(sApi,player_data):
-    while True:
-        update_data = sApi.update().replace("\\",'')
-        threading.Thread(target=analyze_update,args=(sApi,update_data,player_data)).start()
-        time.sleep(PAUSE)
+def launch_and_validate_pulse(sApi,current_mission):
+    pulse = sApi.pulse(current_mission['target']).replace('\\','')
+    process_id = pulse[pulse.find('terminal_process_')+17:-13]
+    print('Launched a pulse. Process id = %s'%process_id)
+    processes_data = get_process_data(sApi,process_id)
+    time_left = float(processes_data['timeleft'])
+    process_name = processes_data['processname']
+    #attendre
+    print("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
+    time.sleep(time_left+1.0)
+    #accepter
+    end_process(processes_data['pid'],process_name)
+    time.sleep(1)
+
+def launch_and_validate_remove(sApi,current_mission):
+    remove_file = sApi.remove_file(current_mission['expect']).replace('\\','')
+    process_id = remove_file[remove_file.find('terminal_process_')+17:-13]
+    print('Sent command to remove file %s'%current_mission['expect'])
+    processes_data = get_process_data(sApi,process_id)
+    time_left = float(processes_data['timeleft'])
+    process_name = processes_data['processname']
+    #attendre
+    print("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
+    time.sleep(time_left+1.0)
+    #accepter
+    end_process(processes_data['pid'],process_name)
+    time.sleep(1)
+
+def update_slavelists(sApi):
+    print('Updating slaveslist')
+    slaveslist = sApi.slaveslist().replace('\\','')
+    slaveslist_content = slaveslist[slaveslist.index('"content":"')+11:-2]
+    return json.loads(slaveslist_content)
+
+def validate_mission(mission_id):
+    print('Ending mission %s'%mission_id)
+    status = sApi.end_mission(mission_id)
+    print("\tStatus: %s"%status)
+    print('-------------------------')
+
+def get_remote_logs(update_data):
+    remotelogs = update_data[update_data.index("remotelogs")+13: update_data.index('","logs":')]
+    try:
+        content = remotelogs[remotelogs.index('content":"[')+12:-3 ]
+    except:
+        content = None
+    return content
+
+def get_local_logs(update_data):
+    locallogs = update_data[update_data.index('","logs":')+12:-2 ]
+    try:
+        content = locallogs[locallogs.index('content":"[')+12:-3]
+    except:
+        content = None
+    return content    
 
 def analyze_update(sApi,update_data,player_data):
-    remote_logs = local_logs = None
-    remote_logs,local_logs = get_logs(update_data)
-    
-    if remote_logs is not None:
+    #remote_logs = local_logs = None
+    #remote_logs,local_logs = get_logs(update_data)
+    if not '"remotelogs":"{"status":"error"' in update_data:
+        #remove remote logs
+        remote_logs = get_remote_logs(update_data)
         remote_data = parse_remote_content(remote_logs)
         if remote_data['id'] != '':
             if remote_data['ip'] == player_data['local_ip']:
-                print(sApi.remove_remote_log(int(remote_data['id'])))
-
-    if local_logs is not None:
+                print('--- REMOVING REMOTE LOG ---')
+                remote_log_res = sApi.remove_remote_log(remote_data['id'])
+                if  remote_log_res != '{"status":"success","content":"[]"}':
+                    print("Remote logs are not empty, checking all logs IP")
+                    remote_logs_parsed = remote_log_res.replace('\\\\\\"',"'").replace('\\\\\\/','').replace('\\','')\
+                                                    .replace('"[{','[{').replace('}]"}','}]}')
+                    remote_log_json = json.loads(remote_logs_parsed)
+                    for log in remote_log_json['content']:
+                        if player_data['local_ip'] in log['entry']:
+                            print('Found player ip (%s) in a log. Removing it.'% player_data['local_ip'])
+                            sApi.remove_remote_log(log['id'])
+                else:
+                    print(remote_data)
+                print('-------------------------')
+    if not ',"logs":"{"status":"error"' in update_data:
+        #remove local logs
+        local_logs = get_local_logs(update_data)
         local_data = parse_local_content(local_logs)
         if local_data['id'] != '':
-            print(sApi.remove_log(int(local_data['id'])))   
+            print('--- REMOVING LOCAL LOG ---')
+            local_log_res = sApi.remove_log(local_data['id'])
+            if  local_log_res != '{"status":"success","content":"[]"}':
+                print("Local logs are not empty, formating")
+                sApi.format_logs()
+            else:
+                print(local_data)
+            print('-------------------------')
+            if ((local_data['type'] == 'Authentication') and (local_data['level'] == '3')):
+                print('SUSPICIOUS LOG DETECTED !')
+                print(local_data)
+                print('-------------------------')
 
 def process_log_content(blk):
     try:
@@ -191,7 +218,7 @@ def parse_local_content(local_logs):
     return data
 
 def get_logs(update_data):
-    remotelogs = update_data[update_data.index("remotelogs")+13: update_data.index('","logs":') ]
+    remotelogs = update_data[update_data.index("remotelogs")+13: update_data.index('","logs":')]
     try:
         rl_content = remotelogs[remotelogs.index('content":"[')+12:-3 ]
     except:
@@ -203,51 +230,22 @@ def get_logs(update_data):
     except:
         ll_content = None
     return rl_content,ll_content
- 
-def main():
-    mission,slaves = new_delete_mission(sApi)
-    for slave in slaves:
-        if slave['ip'] is not mission['target']:
-            sApi.pulse(slave['ip'])
-            # attendre que le password soit connu
-            # envoyer la requête pour accepter
-    connect(sApi,slave['ip'])
- 
-
- 
-def new_delete_mission(api):
-    mission_data_full = json.loads(api.start_mission(1))
-    mission_data = json.loads(json.loads(mission_data_full['content'])[0])
-    print(mission_data)
-
-    api.notifications()
-    api.finances()
-    api.player()
-    slaves = json.loads(api.slaveslist())
-    slaves_npc = json.loads(json.loads(slaves['content'])['npc'])
-    return mission_data,slaves_npc
 
 def connect(api,ip):
     while True:
-        print('connecting to %s ...'%ip)
+        print('Connecting to %s ...'%ip)
         connect_remote = api.connect_remote(ip)
         print(connect_remote)
         if 'Love Succs' in connect_remote:
-            print('detected "Love Succs", reconnecting to %s'%ip)
+            print('\tDetected "Love Succs", reconnecting to %s'%ip)
             time.sleep(1)
         else:
             break
 
-
-    api.slaveslist()
-
-    print('scanning ...')
-    print(api.scan())
-
-    api.inventory()
-
-    api.notifications()
-    print('connected to %s'%ip)
+    print('Scanning %s'%ip)
+    scan = api.scan().replace('\\','')
+    scan_result = scan[scan.find('"{"action":"')+12:scan.find('<script>')]
+    print('\t%s'%scan_result)
 
 
 def end_mission(api,mission_id):
@@ -258,27 +256,14 @@ def launch_game(sApi):
     session_remote = sApi.session_remote().replace('\\','')
     remote_ip = session_remote[session_remote.index('":"["')+6:session_remote.index('"]"')]
 
-    sApi.defense()
-    sApi.get_logs()
-    sApi.powerups()
-    sApi.get_activity()
-
     player = sApi.player().replace('\\','')
     player_content = player[player.index('"content":"{')+11:-2]
     player_data = json.loads(player_content)
-
-    sApi.get_missions()
-    sApi.get_chat()
-    sApi.get_processes()
 
     slaveslist = sApi.slaveslist().replace('\\','')
     slaveslist_content = slaveslist[slaveslist.index('"content":"{')+11:-2]
     slaveslist_data = json.loads(slaveslist_content)
 
-    sApi.notifications()
-    sApi.get_files()
-    sApi.update()
-    sApi.notifications()
     finances = sApi.finances().replace('\\','').replace('"[{"','[{"').replace('"}]"','"}]')
     finances_content = finances[finances.index('"content":"{')+11:-2]
     finances_data = json.loads(finances_content)
@@ -292,10 +277,50 @@ def launch_game(sApi):
         'player_slaves': slaveslist_data['players']
     }
 
+def game_loop(sApi,player_data):
+    while True:
+            # chose a random mission_id to not be too previsible
+            mission_id = random.randint(MIN_MISSION,MAX_MISSION)
+            #lancer la mission
+            current_mission = start_delete_mission(sApi,mission_id)
+
+            #la victime n'est pas dans mes slaves ?
+            if not target_is_slave(player_data['npc_slaves'],current_mission['target']):
+                print("Target (%s) is not in slaves list."%current_mission['target'])
+                #faire un pulse, attendre et le valider
+                launch_and_validate_pulse(sApi,current_mission)
+                # update la liste des slaves
+                player_data['npc_slaves'] = update_slavelists(sApi)['npcs']
+            
+            #se connecter sur la cible
+            connect(sApi,current_mission['target'])
+
+            # faire un rm, attendre et valider
+            launch_and_validate_remove(sApi,current_mission)
+
+            #valider la mission (terminée après le rm)
+            validate_mission(current_mission['id'])
+
+            # on quitte la connexion actuelle (remise à l'état initial)
+            print('Exit remote connection (%s)'%current_mission['target'])
+            sApi.exit_connection()
+            # demande de notifs (client like)
+            sApi.notifications()
+            # pause de sécurité (pas obligée)
+            print('Pause mission thread for %ds. Reason: antiban'%ANTIBAN_PAUSE)
+            time.sleep(ANTIBAN_PAUSE)
+
+def update_loop(sApi,player_data):
+    while True:
+        update_data = sApi.update().replace("\\",'')
+        threading.Thread(target=analyze_update,args=(sApi,update_data,player_data)).start()
+        time.sleep(PAUSE_UPDATE)
+
 if __name__=='__main__':
-    sApi = SlaveApi(Cookie,csrf,very,UserAgent)
+    sApi = SlaveApi(Cookie,csrf,very)
     player_data = launch_game(sApi)
-    print('Welcome, %s. Your infos are:'%player_data['username'])
+    print('Welcome, %s.\nThe bot will launch shortly.'%player_data['username'])
+    print('-------------------\n')
     try:
         game_thread=threading.Thread(target=game_loop,args=(sApi,player_data))
         game_thread.start()
@@ -304,6 +329,5 @@ if __name__=='__main__':
         update_thread.start()
     except:
         print ("Error: unable to start thread")
-
     while 1:
         pass

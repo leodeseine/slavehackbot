@@ -6,16 +6,15 @@ import json
 
 class SlaveApi():
 
-    def __init__(self,cookie,csrf,very,user_agent):
+    def __init__(self,cookie,csrf,very):
         self.cookie = cookie
         self.csrf = csrf
         self.very = very
-        self.user_agent = user_agent
         self.init()
 
     def init(self):
         self.post_headers = { \
-            'User-Agent': self.user_agent,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.77 Safari/537.36',
             'very': self.very,
             'csrf': self.csrf,
             'Server': 'Slavehack2',
@@ -333,7 +332,18 @@ class SlaveApi():
 
     def format_harddrive(self):
         post_data = 'action=get&data={"command":"[\\"format\\",\\"harddrive\\"]"}'
-        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?activity", \
+        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?terminal", \
+            cookies={'Slavehack':self.cookie}, \
+            headers=self.post_headers, \
+            data=post_data \
+        )
+        p = r.prepare()
+        s=requests.Session()
+        return s.send(p).text
+
+    def format_logs(self):
+        post_data = 'action=get&data={"command":"[\\"format\\",\\"logs\\"]"}'
+        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?terminal", \
             cookies={'Slavehack':self.cookie}, \
             headers=self.post_headers, \
             data=post_data \

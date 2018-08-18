@@ -14,14 +14,13 @@ Cookie="80pa65mjbisg3a8ilj4ee97440" # set your cookie heres
 UserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.77 Safari/537.36"
 very='cvvw45yvj' # Normally doesn't change
 csrf='cdcd5f7a980bea956416c0e3e5e77ff8' # get your token in the html or request header
-PAUSE = 0.8
+PAUSE = 1
 ANTIBAN_PAUSE = 4
 MIN_MISSION = 5
 MAX_MISSION =10
 
 def game_loop(sApi,player_data):
     while True:
-            pass
             #lancer la mission
             mission_id = random.randint(MIN_MISSION,MAX_MISSION)
             mission = sApi.start_mission(mission_id).replace('\\','')
@@ -223,9 +222,6 @@ def new_delete_mission(api):
     mission_data = json.loads(json.loads(mission_data_full['content'])[0])
     print(mission_data)
 
-    api.notifications()
-    api.finances()
-    api.player()
     slaves = json.loads(api.slaveslist())
     slaves_npc = json.loads(json.loads(slaves['content'])['npc'])
     return mission_data,slaves_npc
@@ -241,15 +237,9 @@ def connect(api,ip):
         else:
             break
 
-
-    api.slaveslist()
-
     print('scanning ...')
     print(api.scan())
 
-    api.inventory()
-
-    api.notifications()
     print('connected to %s'%ip)
 
 
@@ -261,27 +251,14 @@ def launch_game(sApi):
     session_remote = sApi.session_remote().replace('\\','')
     remote_ip = session_remote[session_remote.index('":"["')+6:session_remote.index('"]"')]
 
-    sApi.defense()
-    sApi.get_logs()
-    sApi.powerups()
-    sApi.get_activity()
-
     player = sApi.player().replace('\\','')
     player_content = player[player.index('"content":"{')+11:-2]
     player_data = json.loads(player_content)
-
-    sApi.get_missions()
-    sApi.get_chat()
-    sApi.get_processes()
 
     slaveslist = sApi.slaveslist().replace('\\','')
     slaveslist_content = slaveslist[slaveslist.index('"content":"{')+11:-2]
     slaveslist_data = json.loads(slaveslist_content)
 
-    sApi.notifications()
-    sApi.get_files()
-    sApi.update()
-    sApi.notifications()
     finances = sApi.finances().replace('\\','').replace('"[{"','[{"').replace('"}]"','"}]')
     finances_content = finances[finances.index('"content":"{')+11:-2]
     finances_data = json.loads(finances_content)
@@ -296,7 +273,7 @@ def launch_game(sApi):
     }
 
 if __name__=='__main__':
-    sApi = SlaveApi(Cookie,csrf,very,UserAgent)
+    sApi = SlaveApi(Cookie,csrf,very)
     player_data = launch_game(sApi)
     print('Welcome, %s. Your infos are:'%player_data['username'])
     try:
