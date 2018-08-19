@@ -87,7 +87,16 @@ def launch_and_validate_pulse(sApi,current_mission):
     end_process(processes_data['pid'],process_name)
     time.sleep(1)
 
-def launch_and_validate_remove(sApi,current_mission):
+def clear_remote_logs(sApi,local_ip):
+    logs = sApi.get_terminal_logs().replace('\\\\\\"',"'").replace('\\\\\\/','').replace('\\','')\
+                                .replace('"{','{').replace('}"','}')
+    logs_data = json.loads(logs)
+    for log in logs_data['content']['logs']:
+        if local_ip in log['entry']:
+            print('Found a log with our IP in remote logs. Removing it.')
+            sApi.remove_remote_log(log['id'])
+
+def launch_and_validate_remove(sApi,current_mission,player_data):
     remove_file = sApi.remove_file(current_mission['expect']).replace('\\','')
     process_id = remove_file[remove_file.find('terminal_process_')+17:-13]
     print('Sent command to remove file %s'%current_mission['expect'])
@@ -99,6 +108,7 @@ def launch_and_validate_remove(sApi,current_mission):
     time.sleep(time_left+1.0)
     #accepter
     end_process(processes_data['pid'],process_name)
+    clear_remote_logs(sApi,player_data)
     time.sleep(1)
 
 def update_slavelists(sApi):
@@ -239,7 +249,7 @@ def get_logs(update_data):
         ll_content = None
     return rl_content,ll_content
 
-def connect(api,ip):
+def connect(api,ip,local_ip):
     while True:
         print('Connecting to %s ...'%ip)
         connect_remote = api.connect_remote(ip)
@@ -248,6 +258,7 @@ def connect(api,ip):
             print('\tDetected "Love Succs", reconnecting to %s'%ip)
             time.sleep(1)
         else:
+            clear_remote_logs(api,local_ip)
             break
 
     print('Scanning %s'%ip)
@@ -301,10 +312,10 @@ def game_loop(sApi,player_data):
                 player_data['npc_slaves'] = update_slavelists(sApi)['npcs']
             
             #se connecter sur la cible
-            connect(sApi,current_mission['target'])
+            connect(sApi,current_mission['target'],player_data['local_ip'])
 
             # faire un rm, attendre et valider
-            launch_and_validate_remove(sApi,current_mission)
+            launch_and_validate_remove(sApi,current_mission,player_data['local_ip'])
 
             #valider la mission (terminée après le rm)
             validate_mission(current_mission['id'])

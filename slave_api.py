@@ -351,3 +351,14 @@ class SlaveApi():
         p = r.prepare()
         s=requests.Session()
         return s.send(p).text
+
+    def get_terminal_logs(self):
+        post_data = 'action=get&data={"command":"[\\"logs\\"]"}'
+        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?terminal", \
+            cookies={'Slavehack':self.cookie}, \
+            headers=self.post_headers, \
+            data=post_data \
+        )
+        p = r.prepare()
+        s=requests.Session()
+        return s.send(p).text
