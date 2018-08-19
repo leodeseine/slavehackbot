@@ -20,6 +20,7 @@ PAUSE_UPDATE = float(config['DEFAULT']['PAUSE_UPDATE'])
 ANTIBAN_PAUSE = float(config['DEFAULT']['ANTIBAN_PAUSE'])
 MIN_MISSION = int(config['DEFAULT']['MIN_MISSION'])
 MAX_MISSION =int(config['DEFAULT']['MAX_MISSION'])
+FORMAT_TIMER = int(config['DEFAULT']['FORMAT_TIMER'])
 
 def start_delete_mission(sApi,mission_id):
     mission = sApi.start_mission(mission_id).replace('\\','')
@@ -128,7 +129,7 @@ def get_local_logs(update_data):
         content = None
     return content    
 
-def analyze_update(sApi,update_data,player_data):
+def analyze_update(sApi,update_data,player_data,harddrive_data):
     #remote_logs = local_logs = None
     #remote_logs,local_logs = get_logs(update_data)
     if not '"remotelogs":"{"status":"error"' in update_data:
@@ -167,7 +168,14 @@ def analyze_update(sApi,update_data,player_data):
             if ((local_data['type'] == 'Authentication') and (local_data['level'] == '3')):
                 print('SUSPICIOUS LOG DETECTED !')
                 print(local_data)
+                harddrive_data['format_harddrive'] = True
+                print('Suspicious log has been detected. Harddrive will be formatted every %ds.'%FORMAT_TIMER)
                 print('-------------------------')
+    harddrive_data['compteur'] += 1
+    if harddrive_data['compteur'] > FORMAT_TIMER and harddrive_data['format_harddrive']:
+        print('Suspicious log had been detected. Formating.')
+        sApi.format_harddrive()
+        harddrive_data['compteur'] = 0
 
 def process_log_content(blk):
     try:
@@ -311,9 +319,13 @@ def game_loop(sApi,player_data):
             time.sleep(ANTIBAN_PAUSE)
 
 def update_loop(sApi,player_data):
+    harddrive_data = {
+        'format_harddrive': False,
+        'compteur': 0
+    }
     while True:
         update_data = sApi.update().replace("\\",'')
-        threading.Thread(target=analyze_update,args=(sApi,update_data,player_data)).start()
+        threading.Thread(target=analyze_update,args=(sApi,update_data,player_data,harddrive_data)).start()
         time.sleep(PAUSE_UPDATE)
 
 if __name__=='__main__':
