@@ -43,7 +43,7 @@ Clone the directory where you want
 6. `Python3 slave_botv2.py`
 
 # Don't forget a VPN !
-And never use your main account on the same network as your bot ! stay safe, be rich (as they say ;))
+And never use your main and bots accounts on the same network ! stay safe, be rich (as they say ;))
 
 # TODO List
 - [x] Connect to slavehack2
