@@ -16,6 +16,9 @@ My favourite use is:
 1. Connect to https://www.slavehack2.com/
 2. Connect the account you want to bot with
 3. Open developpers tools to get your cookie number and csrf (network tab)
+![slavehackbot](https://ibb.co/g113oK)
+4. Get the CSRF and the Cookie
+5. Edit configuration.ini
 
 # Installation
 You need Python3 to use this bot.
@@ -31,3 +34,8 @@ Clone the directory where you want
 1. Launch a terminal/cmd
 2. Go to bot directory
 3. `Python3 slave_botv2.py`
+
+# Don't forget a VPN !
+And never use your main account on the same network as your bot ! stay safe, be rich (as they say ;))
+
+
