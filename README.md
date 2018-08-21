@@ -7,8 +7,8 @@ My favourite use is:
 * Buy CPU with all the money
 * Stop the bot
 * Change Bot IP
-* With the main account, upload a miner on the bot
-* Create a ne account and repeat !
+* With the main account, upload a miner on the bot (you will be the only one to mine on it since you just changed IP !)
+* Create a new account and repeat !
 
 > You will win 1,500,000$ a day this way, per account
 
