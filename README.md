@@ -35,19 +35,24 @@ Clone the directory where you want
 
 
 # Use the bot
-1. Launch a terminal/cmd
-2. Go to bot directory
-3. `Python3 slave_botv2.py`
+1. Edit the file: configuration.ini
+2. Be sure that the bot has no mission started
+3. Be sure that the bot is not connected to a remote target
+4. Launch a terminal/cmd
+5. Go to bot directory
+6. `Python3 slave_botv2.py`
 
 # Don't forget a VPN !
 And never use your main account on the same network as your bot ! stay safe, be rich (as they say ;))
 
 # TODO List
-[x] Connect to slavehack2
-[x] Erase remote logs (bot IP only)
-[x] Erase local logs (all)
-[x] Play mission (delete one)
-[x] format harddrive when people get detected on bot computer
-[x] Ransomware detection
-[x] Transfer money to BTC, then pay ransomware
+- [x] Connect to slavehack2
+- [x] Erase remote logs (bot IP only)
+- [x] Erase local logs (all)
+- [x] Play mission (delete one)
+- [x] format harddrive (every 15 seconds default) when people get detected on bot computer
+- [x] Ransomware detection (every 60s default)
+- [x] Transfer money to BTC, then pay ransomware (when detected)
+- [ ] proxy http requests
+- [ ] play local commands when needed
 
