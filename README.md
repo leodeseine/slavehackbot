@@ -33,6 +33,7 @@ module requests must also be installed
 
 Clone the directory where you want
 
+`git clone https://github.com/leodeseine/slavehackbot.git`
 
 # Use the bot
 1. Edit the file: configuration.ini
