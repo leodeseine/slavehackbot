@@ -1,5 +1,5 @@
-# slavehackbot
-Hello, this tool will help you to be rich !
+# Slavehackbot
+Hello, this tool will help you to be rich on Slavehack2.
 
 My favourite use is:
 * Create an account
