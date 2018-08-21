@@ -19,8 +19,11 @@ My favourite use is:
 
 # Installation
 You need Python3 to use this bot.
+
 module requests must also be installed
+
 `pip3 install requests`
+
 Clone the directory where you want
 
 
