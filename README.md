@@ -16,9 +16,13 @@ My favourite use is:
 1. Connect to https://www.slavehack2.com/
 2. Connect the account you want to bot with
 3. Open developpers tools to get your cookie number and csrf (network tab)
-![slavehackbot](https://ibb.co/g113oK)
+![slavehackbot](https://preview.ibb.co/hZcb8K/Capture_d_e_cran_2018_08_21_a_20_10_40.png)
 4. Get the CSRF and the Cookie
 5. Edit configuration.ini
+
+> Bot is configured to play mission 1-10, no others !
+> When you are level 1 you can only start mission 1-5
+> I advise to configure MIN_MISSION to 1 and MAX_MISSION to 5, always
 
 # Installation
 You need Python3 to use this bot.
@@ -38,4 +42,12 @@ Clone the directory where you want
 # Don't forget a VPN !
 And never use your main account on the same network as your bot ! stay safe, be rich (as they say ;))
 
+# TODO List
+[x] Connect to slavehack2
+[x] Erase remote logs (bot IP only)
+[x] Erase local logs (all)
+[x] Play mission (delete one)
+[x] format harddrive when people get detected on bot computer
+[x] Ransomware detection
+[x] Transfer money to BTC, then pay ransomware
 
