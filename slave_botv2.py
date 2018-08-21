@@ -21,6 +21,8 @@ ANTIBAN_PAUSE = float(config['DEFAULT']['ANTIBAN_PAUSE'])
 MIN_MISSION = int(config['DEFAULT']['MIN_MISSION'])
 MAX_MISSION =int(config['DEFAULT']['MAX_MISSION'])
 FORMAT_TIMER = int(config['DEFAULT']['FORMAT_TIMER'])
+PAUSE_RANSOM = int(config['DEFAULT']['FORMAT_TIMER'])
+BTC_FEES_PERCENT = float(config['DEFAULT']['BTC_FEES_PERCENT'])
 
 def start_delete_mission(sApi,mission_id):
     mission = sApi.start_mission(mission_id).replace('\\','')
@@ -339,6 +341,47 @@ def update_loop(sApi,player_data):
         threading.Thread(target=analyze_update,args=(sApi,update_data,player_data,harddrive_data)).start()
         time.sleep(PAUSE_UPDATE)
 
+def ransom_active(sApi):
+    test = sApi.terminal_test().replace('\\','')
+    return 'Access to your Terminal is being held for ransom' in test
+
+def pay_ransomware(sApi):
+    test = sApi.terminal_test().replace('\\','')
+    # ici, obtenir le montant et l'id à qui il faut envoyer
+    #'{"status":"success","content":"{\"action\":\"<b class=\\\"text-danger\\\">Access to your Terminal is being held for ransom.
+    # You must send a payment of $326,771 to us immediately to regain access.
+    # <br>To complete payment, run the following terminal command:
+    # <br><br><\\\/b><span class=\\\"text-warning">pay 326771.38 1254</span><br><br><b class=\\\"text-danger\\\">Once payment has been completed you will regain access to your terminal.<\\\/b><br><br><span class=\\\"text-muted\\\">Hint: You can wait for the process in the top right to complete instead if you are unable to pay<\\\/span>\"}"}'
+    amount_and_id = test[test.find('"text-warning">')+15:test.find('</span><br><br><b')]
+    amount_and_id_split = amount_and_id.split(' ')
+    amount= amount_and_id_split[1]
+    id= amount_and_id_split[2]
+    return sApi.terminal_pay_ransomware(amount,id)
+
+def get_finances(sApi):
+    finances_res = sApi.finances().replace('\\\\\\"','"').replace('"[{"','[{"').replace('"}]\\"','"}]')\
+                                    .replace('"{\\"','{\\"').replace('\\','').replace('}}"}','}}}')
+    print(finances_res)
+    return json.loads(finances_res)['content']
+
+def convert_cash_to_btc(sApi):
+    finances = get_finances(sApi)
+    btc_conversion = float(finances['accounts']['conversion'].replace(',',''))
+    total_dollars = float(finances['accounts']['total'].replace(',',''))
+    amount = float((total_dollars * (1-BTC_FEES_PERCENT))/btc_conversion)
+    return sApi.buy_bitcoin(finances['accounts']['list'][0]['aid'],amount)
+
+def ransom_loop(sApi):
+    while  True:
+        if ransom_active(sApi):
+            print('A ransomware has been detected on local computer. Getting rid of it.')
+            print(convert_cash_to_btc(sApi))
+            time.sleep(1)
+            print(pay_ransomware(sApi))
+        else:
+            print('No ransomware were found on local computer.')
+        time.sleep(PAUSE_RANSOM)
+
 if __name__=='__main__':
     sApi = SlaveApi(Cookie,csrf,very)
     player_data = launch_game(sApi)
@@ -350,6 +393,9 @@ if __name__=='__main__':
 
         update_thread=threading.Thread(target=update_loop,args=(sApi,player_data))
         update_thread.start()
+
+        ransom_thread = threading.Thread(target=ransom_loop,args=(sApi,))
+        ransom_thread.start()
     except:
         print ("Error: unable to start thread")
     while 1:

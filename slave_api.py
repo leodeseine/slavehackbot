@@ -362,3 +362,36 @@ class SlaveApi():
         p = r.prepare()
         s=requests.Session()
         return s.send(p).text
+
+    def buy_bitcoin(self,bank_account,amount):
+        post_data = 'action=get&data={"buying":true,"bank":"'+str(bank_account)+'","amount":"'+str(amount)+'"}'
+        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?finances", \
+            cookies={'Slavehack':self.cookie}, \
+            headers=self.post_headers, \
+            data=post_data \
+        )
+        p = r.prepare()
+        s=requests.Session()
+        return s.send(p).text
+
+    def terminal_test(self):
+        post_data = 'action=get&data={"command":"[\\"test\\"]"}}'
+        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?terminal", \
+            cookies={'Slavehack':self.cookie}, \
+            headers=self.post_headers, \
+            data=post_data \
+        )
+        p = r.prepare()
+        s=requests.Session()
+        return s.send(p).text
+
+    def terminal_pay_ransomware(self,amount,id):
+        post_data = 'action=get&data={"command":"[\\"pay\\",\\"'+amount+'\\",\\"'+id+'\\"]"}'
+        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?terminal", \
+            cookies={'Slavehack':self.cookie}, \
+            headers=self.post_headers, \
+            data=post_data \
+        )
+        p = r.prepare()
+        s=requests.Session()
+        return s.send(p).text       
