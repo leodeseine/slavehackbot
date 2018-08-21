@@ -17,7 +17,7 @@ My favourite use is:
 2. Connect the account you want to bot with
 3. Open developpers tools to get your cookie number and csrf (network tab)
 ![slavehackbot](https://preview.ibb.co/hZcb8K/Capture_d_e_cran_2018_08_21_a_20_10_40.png)
-4. Get the CSRF and the Cookie
+4. Get the CSRF and the Cookie (for the cookie, do not copy the 'Slavehack=')
 5. Edit configuration.ini
 
 > Bot is configured to play mission 1-10, no others !
