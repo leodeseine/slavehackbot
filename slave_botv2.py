@@ -18,10 +18,8 @@ csrf=str(config['DEFAULT']['csrf'])
 
 PAUSE_UPDATE = float(config['DEFAULT']['PAUSE_UPDATE'])
 ANTIBAN_PAUSE = float(config['DEFAULT']['ANTIBAN_PAUSE'])
-MIN_MISSION = int(config['DEFAULT']['MIN_MISSION'])
-MAX_MISSION =int(config['DEFAULT']['MAX_MISSION'])
 FORMAT_TIMER = int(config['DEFAULT']['FORMAT_TIMER'])
-PAUSE_RANSOM = int(config['DEFAULT']['FORMAT_TIMER'])
+PAUSE_RANSOM = int(config['DEFAULT']['PAUSE_RANSOM'])
 BTC_FEES_PERCENT = float(config['DEFAULT']['BTC_FEES_PERCENT'])
 
 def start_delete_mission(sApi,mission_id):
@@ -153,13 +151,13 @@ def analyze_update(sApi,update_data,player_data,harddrive_data):
                 print('--- REMOVING REMOTE LOG ---')
                 remote_log_res = sApi.remove_remote_log(remote_data['id'])
                 if  remote_log_res != '{"status":"success","content":"[]"}':
-                    print("Remote logs are not empty, checking all logs IP")
+                    print("\tRemote logs are not empty, checking all logs IP")
                     remote_logs_parsed = remote_log_res.replace('\\\\\\"',"'").replace('\\\\\\/','').replace('\\','')\
                                                     .replace('"[{','[{').replace('}]"}','}]}')
                     remote_log_json = json.loads(remote_logs_parsed)
                     for log in remote_log_json['content']:
                         if player_data['local_ip'] in log['entry']:
-                            print('Found player ip (%s) in a log. Removing it.'% player_data['local_ip'])
+                            print('\tFound player ip (%s) in a log. Removing it.'% player_data['local_ip'])
                             sApi.remove_remote_log(log['id'])
                 else:
                     print(remote_data)
@@ -172,7 +170,7 @@ def analyze_update(sApi,update_data,player_data,harddrive_data):
             print('--- REMOVING LOCAL LOG ---')
             local_log_res = sApi.remove_log(local_data['id'])
             if  local_log_res != '{"status":"success","content":"[]"}':
-                print("Local logs are not empty, formating")
+                print("\tLocal logs are not empty, formating")
                 sApi.format_logs()
             else:
                 print(local_data)
@@ -255,11 +253,12 @@ def connect(api,ip,local_ip):
     while True:
         print('Connecting to %s ...'%ip)
         connect_remote = api.connect_remote(ip)
-        print(connect_remote)
         if 'Love Succs' in connect_remote:
             print('\tDetected "Love Succs", reconnecting to %s'%ip)
             time.sleep(1)
         else:
+            connect_data = connect_remote[connect_remote.find('Accessing '):connect_remote.find('<script>')]
+            print('\t'+connect_data)
             clear_remote_logs(api,local_ip)
             break
 
@@ -291,6 +290,7 @@ def launch_game(sApi):
     return {
         'username': player_data['player_info']['username'],
         'local_ip': player_data['player_info']['ip'],
+        'level': int(player_data['player_info']['level']),
         'remote_ip': remote_ip,
         'dollars': finances_data['accounts']['total'],
         'btc': finances_data['accounts']['totalbtc'],
@@ -298,10 +298,28 @@ def launch_game(sApi):
         'player_slaves': slaveslist_data['players']
     }
 
+def process_notifications(sApi,player_data):
+    notifications = json.loads(sApi.notifications())
+    for notification in notifications['content']:
+        if notification['title'] == 'Mission Completed':
+            print(notification['message'])
+        elif notification['title'] == 'You Just Leveled Up!':
+            new_level = int(notification['message'].split(' ')[2])
+            player_data['level'] = new_level
+            print('Level up ! you are now level %s'%new_level)
+
 def game_loop(sApi,player_data):
     while True:
             # chose a random mission_id to not be too previsible
-            mission_id = random.randint(MIN_MISSION,MAX_MISSION)
+            min = 1
+            max = 1
+            if player_data['level']<=10:
+                min = 3
+                max = 5
+            else:
+                min = 8
+                max = 10
+            mission_id = random.randint(min,max)
             #lancer la mission
             current_mission = start_delete_mission(sApi,mission_id)
 
@@ -326,7 +344,7 @@ def game_loop(sApi,player_data):
             print('Exit remote connection (%s)'%current_mission['target'])
             sApi.exit_connection()
             # demande de notifs (client like)
-            sApi.notifications()
+            process_notifications(sApi,player_data)
             # pause de sécurité (pas obligée)
             print('Pause mission thread for %ds. Reason: antiban'%ANTIBAN_PAUSE)
             time.sleep(ANTIBAN_PAUSE)
@@ -347,11 +365,6 @@ def ransom_active(sApi):
 
 def pay_ransomware(sApi):
     test = sApi.terminal_test().replace('\\','')
-    # ici, obtenir le montant et l'id à qui il faut envoyer
-    #'{"status":"success","content":"{\"action\":\"<b class=\\\"text-danger\\\">Access to your Terminal is being held for ransom.
-    # You must send a payment of $326,771 to us immediately to regain access.
-    # <br>To complete payment, run the following terminal command:
-    # <br><br><\\\/b><span class=\\\"text-warning">pay 326771.38 1254</span><br><br><b class=\\\"text-danger\\\">Once payment has been completed you will regain access to your terminal.<\\\/b><br><br><span class=\\\"text-muted\\\">Hint: You can wait for the process in the top right to complete instead if you are unable to pay<\\\/span>\"}"}'
     amount_and_id = test[test.find('"text-warning">')+15:test.find('</span><br><br><b')]
     amount_and_id_split = amount_and_id.split(' ')
     amount= amount_and_id_split[1]
@@ -375,9 +388,11 @@ def ransom_loop(sApi):
     while  True:
         if ransom_active(sApi):
             print('A ransomware has been detected on local computer. Getting rid of it.')
-            print(convert_cash_to_btc(sApi))
-            time.sleep(1)
-            print(pay_ransomware(sApi))
+            print('WE QUIT FOR THE MOMENT !')
+            sys.exit()
+            #print(convert_cash_to_btc(sApi))
+            #time.sleep(1)
+            #print(pay_ransomware(sApi))
         else:
             print('No ransomware were found on local computer.')
         time.sleep(PAUSE_RANSOM)
@@ -385,7 +400,7 @@ def ransom_loop(sApi):
 if __name__=='__main__':
     sApi = SlaveApi(Cookie,csrf,very)
     player_data = launch_game(sApi)
-    print('Welcome, %s.\nThe bot will launch shortly.'%player_data['username'])
+    print('Welcome, %s. Congratulation on your level %s !\nThe bot will launch shortly.'%(player_data['username'],player_data['level']))
     print('-------------------\n')
     try:
         game_thread=threading.Thread(target=game_loop,args=(sApi,player_data))
