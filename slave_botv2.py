@@ -8,6 +8,7 @@ import threading
 import configparser
 from slave_api import SlaveApi
 from math import fabs
+import sys
  
 config = configparser.ConfigParser()
 config.read('configuration.ini')
@@ -314,7 +315,7 @@ def game_loop(sApi,player_data):
             # chose a random mission_id to not be too previsible
             min = 1
             max = 1
-            if player_data['level']<=10:
+            if player_data['level']<10:
                 min = 3
                 max = 5
             else:
@@ -403,6 +404,10 @@ if __name__=='__main__':
     player_data = launch_game(sApi)
     print('Welcome, %s. Congratulation on your level %s !\nThe bot will launch shortly.'%(player_data['username'],player_data['level']))
     print('-------------------\n')
+    game_thread = None
+    update_thread = None
+    ransom_thread = None
+    bot_enable = True
     try:
         game_thread=threading.Thread(target=game_loop,args=(sApi,player_data))
         game_thread.start()
@@ -412,10 +417,17 @@ if __name__=='__main__':
 
         ransom_thread = threading.Thread(target=ransom_loop,args=(sApi,))
         ransom_thread.start()
+        while bot_enable:
+            try:
+                pass
+            except KeyboardInterrupt:
+                print('Bye, %s'%player_data['username'])
+                bot_enable = False
+                game_thread.do_run = False
+                game_thread.join()
+                update_thread.do_run = False
+                update_thread.join()
+                ransom_thread.do_run = False
+                ransom_thread.join()
     except:
         print ("Error: unable to start thread")
-    while True:
-        try:
-            pass
-        except KeyboardInterrupt:
-            print('Bye, %s'%player_data['username'])
