@@ -7,6 +7,7 @@ import json
 import threading
 import configparser
 from slave_api import SlaveApi
+from math import fabs
  
 config = configparser.ConfigParser()
 config.read('configuration.ini')
@@ -82,7 +83,7 @@ def launch_and_validate_pulse(sApi,current_mission):
     process_name = processes_data['processname']
     #attendre
     print("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
-    time.sleep(time_left+1.0)
+    time.sleep(fabs(time_left+1.0))
     #accepter
     end_process(processes_data['pid'],process_name)
     time.sleep(1)
@@ -93,7 +94,7 @@ def clear_remote_logs(sApi,local_ip):
     logs_data = json.loads(logs)
     for log in logs_data['content']['logs']:
         if local_ip in log['entry']:
-            print('Found a log with our IP in remote logs. Removing it.')
+            print('Found a log with our IP (%s) in remote logs. Removing it.'%local_ip)
             sApi.remove_remote_log(log['id'])
 
 def launch_and_validate_remove(sApi,current_mission,player_data):
@@ -105,7 +106,7 @@ def launch_and_validate_remove(sApi,current_mission,player_data):
     process_name = processes_data['processname']
     #attendre
     print("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
-    time.sleep(time_left+1.0)
+    time.sleep(fabs(time_left+1.0))
     #accepter
     end_process(processes_data['pid'],process_name)
     clear_remote_logs(sApi,player_data)
@@ -347,7 +348,7 @@ def game_loop(sApi,player_data):
             process_notifications(sApi,player_data)
             # pause de sécurité (pas obligée)
             print('Pause mission thread for %ds. Reason: antiban'%ANTIBAN_PAUSE)
-            time.sleep(ANTIBAN_PAUSE)
+            time.sleep(fabs(ANTIBAN_PAUSE))
 
 def update_loop(sApi,player_data):
     harddrive_data = {
@@ -357,7 +358,7 @@ def update_loop(sApi,player_data):
     while True:
         update_data = sApi.update().replace("\\",'')
         threading.Thread(target=analyze_update,args=(sApi,update_data,player_data,harddrive_data)).start()
-        time.sleep(PAUSE_UPDATE)
+        time.sleep(fabs(PAUSE_UPDATE))
 
 def ransom_active(sApi):
     test = sApi.terminal_test().replace('\\','')
@@ -395,7 +396,7 @@ def ransom_loop(sApi):
             #print(pay_ransomware(sApi))
         else:
             print('No ransomware were found on local computer.')
-        time.sleep(PAUSE_RANSOM)
+        time.sleep(fabs(PAUSE_RANSOM))
 
 if __name__=='__main__':
     sApi = SlaveApi(Cookie,csrf,very)
@@ -413,5 +414,8 @@ if __name__=='__main__':
         ransom_thread.start()
     except:
         print ("Error: unable to start thread")
-    while 1:
-        pass
+    while True:
+        try:
+            pass
+        except KeyboardInterrupt:
+            print('Bye, %s'%player_data['username'])
