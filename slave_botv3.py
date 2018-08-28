@@ -108,6 +108,13 @@ def clear_remote_logs(sApi,local_ip):
             print('We havent found our log yet ... pausing for %ds'%(0.5))
             time.sleep(0.5)
 
+def add_fake_remove_logs(sApi,player_data,expect):
+    all_slaves = player_data['npc_slaves']
+    random_slave = random.choice(all_slaves)
+    random_ip = random_slave['ip']
+    print("Creating fake delete log:\n\tSource: %s\n\tExpect: %s"%(random_ip,expect))
+    return sApi.add_delete_log(random_ip,expect)
+
 def launch_and_validate_remove(sApi,current_mission,player_data):
     remove_file = sApi.remove_file(current_mission['expect']).replace('\\','')
     process_id = remove_file[remove_file.find('terminal_process_')+17:-13]
@@ -115,13 +122,17 @@ def launch_and_validate_remove(sApi,current_mission,player_data):
     processes_data = get_process_data(sApi,process_id)
     time_left = float(processes_data['timeleft'])
     process_name = processes_data['processname']
+
     #attendre
     print("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
-    time.sleep(fabs(time_left+1.0))
+    time.sleep(fabs(time_left))
+
+    #creating fake log
+    add_fake_remove_logs(sApi,player_data,current_mission['expect'])
+    time.sleep(1.0)
     #accepter
     end_process(processes_data['pid'],process_name)
-    clear_remote_logs(sApi,player_data)
-    time.sleep(1)
+    clear_remote_logs(sApi,player_data['local_ip'])
 
 def update_slavelists(sApi):
     print('Updating slaveslist')
@@ -357,7 +368,7 @@ def game_loop(sApi,player_data):
             connect(sApi,current_mission['target'],player_data['local_ip'])
 
             # faire un rm, attendre et valider
-            launch_and_validate_remove(sApi,current_mission,player_data['local_ip'])
+            launch_and_validate_remove(sApi,current_mission,player_data)
 
             #valider la mission (terminée après le rm)
             validate_mission(current_mission['id'])

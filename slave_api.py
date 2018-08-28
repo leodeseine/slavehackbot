@@ -394,4 +394,15 @@ class SlaveApi():
         )
         p = r.prepare()
         s=requests.Session()
-        return s.send(p).text       
+        return s.send(p).text
+
+    def add_delete_log(self,ip,file_name):
+        post_data = """action=get&data={"command":"[\\"addlog\\",\\"-type='delete'\\",\\"-ip='"""+ip+"""'\\",\\"-entry='"""+file_name+"""'\\",\\"-level='danger'\\"]"}"""
+        r = requests.Request("POST", "https://www.slavehack2.com/theme/api/?terminal", \
+            cookies={'Slavehack':self.cookie}, \
+            headers=self.post_headers, \
+            data=post_data \
+        )
+        p = r.prepare()
+        s=requests.Session()
+        return s.send(p).text
