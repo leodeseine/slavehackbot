@@ -268,6 +268,9 @@ def connect(api,ip,local_ip):
         if 'Love Succs' in connect_remote:
             print('\tDetected "Love Succs", reconnecting to %s'%ip)
             time.sleep(1)
+        elif 'You are already connected to a target.' in connect_remote:
+            print('You are already connected to a target.')
+            time.sleep(1)
         else:
             connect_data = connect_remote[connect_remote.find('Accessing '):connect_remote.find('<script>')]
             print('\t'+connect_data)
@@ -320,6 +323,9 @@ def process_notifications(sApi,player_data):
             player_data['level'] = new_level
             print('Level up ! you are now level %s'%new_level)
         elif notification['title'] == 'Thanks for Playing!':
+            print(notification['message'])
+        elif notification['title'] == 'You Just Prestiged!':
+            player_data['level'] = 1
             print(notification['message'])
         else:
             print(notification)
