@@ -23,6 +23,7 @@ ANTIBAN_PAUSE = float(config['DEFAULT']['ANTIBAN_PAUSE'])
 FORMAT_TIMER = int(config['DEFAULT']['FORMAT_TIMER'])
 PAUSE_RANSOM = int(config['DEFAULT']['PAUSE_RANSOM'])
 BTC_FEES_PERCENT = float(config['DEFAULT']['BTC_FEES_PERCENT'])
+PAUSE_LOCAL_LOGS = int(config['DEFAULT']['PAUSE_LOCAL_LOGS'])
 
 def start_delete_mission(sApi,mission_id):
     mission_data = []
@@ -93,13 +94,19 @@ def launch_and_validate_pulse(sApi,current_mission):
     time.sleep(1)
 
 def clear_remote_logs(sApi,local_ip):
-    logs = sApi.get_terminal_logs().replace('\\\\\\"',"'").replace('\\\\\\/','').replace('\\','')\
-                                .replace('"{','{').replace('}"','}')
-    logs_data = json.loads(logs)
-    for log in logs_data['content']['logs']:
-        if local_ip in log['entry']:
-            print('Found a log with our IP (%s) in remote logs. Removing it.'%local_ip)
-            sApi.remove_remote_log(log['id'])
+    removed = False
+    while not removed:
+        logs = sApi.get_terminal_logs().replace('\\\\\\"',"'").replace('\\\\\\/','').replace('\\','')\
+                                    .replace('"{','{').replace('}"','}')
+        logs_data = json.loads(logs)
+        for log in logs_data['content']['logs']:
+            if local_ip in log['entry']:
+                print('Found a log with our IP (%s) in remote logs. Removing it.'%local_ip)
+                sApi.remove_remote_log(log['id'])
+                removed = True
+        if not removed:
+            print('We havent found our log yet ... pausing for %ds'%(0.5))
+            time.sleep(0.5)
 
 def launch_and_validate_remove(sApi,current_mission,player_data):
     remove_file = sApi.remove_file(current_mission['expect']).replace('\\','')
@@ -312,6 +319,8 @@ def process_notifications(sApi,player_data):
             new_level = int(notification['message'].split(' ')[2])
             player_data['level'] = new_level
             print('Level up ! you are now level %s'%new_level)
+        elif notification['title'] == 'Thanks for Playing!':
+            print(notification['message'])
         else:
             print(notification)
 
@@ -356,15 +365,10 @@ def game_loop(sApi,player_data):
             print('Pause mission thread for %ds. Reason: antiban'%ANTIBAN_PAUSE)
             time.sleep(fabs(ANTIBAN_PAUSE))
 
-def update_loop(sApi,player_data):
-    harddrive_data = {
-        'format_harddrive': False,
-        'compteur': 0
-    }
+def update_loop(sApi):
     while True:
-        update_data = sApi.update().replace("\\",'')
-        threading.Thread(target=analyze_update,args=(sApi,update_data,player_data,harddrive_data)).start()
-        time.sleep(fabs(PAUSE_UPDATE))
+        sApi.format_logs()
+        time.sleep(fabs(PAUSE_LOCAL_LOGS))
 
 def ransom_active(sApi):
     test = sApi.terminal_test().replace('\\','')
@@ -417,7 +421,7 @@ if __name__=='__main__':
         game_thread=threading.Thread(target=game_loop,args=(sApi,player_data))
         game_thread.start()
 
-        update_thread=threading.Thread(target=update_loop,args=(sApi,player_data))
+        update_thread=threading.Thread(target=update_loop,args=(sApi,))
         update_thread.start()
 
         ransom_thread = threading.Thread(target=ransom_loop,args=(sApi,))
