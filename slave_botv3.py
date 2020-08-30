@@ -9,6 +9,7 @@ import configparser
 from slave_api import SlaveApi
 from math import fabs
 import sys
+from datetime import datetime
  
 config = configparser.ConfigParser()
 config.read('configuration.ini')
@@ -34,7 +35,7 @@ def start_delete_mission(sApi,mission_id):
         time.sleep(1)
     current_mission = mission_data[0]
 
-    print('Starting mission %s:' % current_mission['id'])
+    print_with_time('Starting mission %s:' % current_mission['id'])
     print('\tSubject\t: %s' % current_mission['subject'])
     print('\tTarget\t: %s' % current_mission['target'])
     print('\tFile\t: %s' % current_mission['expect'])
@@ -45,13 +46,13 @@ def start_delete_mission(sApi,mission_id):
 def target_is_slave(npc_slaves,target_ip):
     for slave in npc_slaves:
         if (slave['ip'] == target_ip):
-            print("Target (%s) is already a slave." % target_ip)
+            print_with_time("Target (%s) is already a slave." % target_ip)
             return True
     return False
 
 def end_process(pid,process_name):
     sApi.end_process(pid)
-    print("Process %s (%s) has been terminated"%(process_name,pid))
+    print_with_time("Process %s (%s) has been terminated"%(process_name,pid))
 
 def get_process_data(sApi,process_id):
     while True:
@@ -65,7 +66,7 @@ def get_process_data(sApi,process_id):
         [{"pid":1933933,"processnum":134,"processname":"Deleting","type":"CPU","object":"29dc2e22d.zip (20.8)","targetip":"150.120.26.74","timestart":"2018-08-18 10:47:27","timetotal":"8.9","timeleft":7.9,"percent":"11.24","done":0}]
         for process in processes_data_tab:
             if str(process_id) == str(process['pid']):
-                print("Found a process id matching (%s):"%process_id)
+                print_with_time("Found a process id matching (%s):"%process_id)
                 print("\tName\t\t: %s"%process['processname'])
                 print("\tType\t\t: %s"%process['type'])
                 print("\tObject\t\t: %s"%process['object'])
@@ -82,12 +83,12 @@ def get_process_data(sApi,process_id):
 def launch_and_validate_pulse(sApi,current_mission):
     pulse = sApi.pulse(current_mission['target']).replace('\\','')
     process_id = pulse[pulse.find('terminal_process_')+17:-13]
-    print('Launched a pulse. Process id = %s'%process_id)
+    print_with_time('Launched a pulse. Process id = %s'%process_id)
     processes_data = get_process_data(sApi,process_id)
     time_left = float(processes_data['timeleft'])
     process_name = processes_data['processname']
     #attendre
-    print("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
+    print_with_time("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
     time.sleep(fabs(time_left+1.0))
     #accepter
     end_process(processes_data['pid'],process_name)
@@ -101,30 +102,30 @@ def clear_remote_logs(sApi,local_ip):
         logs_data = json.loads(logs)
         for log in logs_data['content']['logs']:
             if local_ip in log['entry']:
-                print('Found a log with our IP (%s) in remote logs. Removing it.'%local_ip)
+                print_with_time('Found a log with our IP (%s) in remote logs. Removing it.'%local_ip)
                 sApi.remove_remote_log(log['id'])
                 removed = True
         if not removed:
-            print('We havent found our log yet ... pausing for %ds'%(0.5))
+            print_with_time('We havent found our log yet ... pausing for %ds'%(0.5))
             time.sleep(0.5)
 
 def add_fake_remove_logs(sApi,player_data,expect):
     all_slaves = player_data['npc_slaves']
     random_slave = random.choice(all_slaves)
     random_ip = random_slave['ip']
-    print("Creating fake delete log:\n\tSource: %s\n\tExpect: %s"%(random_ip,expect))
+    print_with_time("Creating fake delete log:\n\tSource: %s\n\tExpect: %s"%(random_ip,expect))
     return sApi.add_delete_log(random_ip,expect)
 
 def launch_and_validate_remove(sApi,current_mission,player_data):
     remove_file = sApi.remove_file(current_mission['expect']).replace('\\','')
     process_id = remove_file[remove_file.find('terminal_process_')+17:-13]
-    print('Sent command to remove file %s'%current_mission['expect'])
+    print_with_time('Sent command to remove file %s'%current_mission['expect'])
     processes_data = get_process_data(sApi,process_id)
     time_left = float(processes_data['timeleft'])
     process_name = processes_data['processname']
 
     #attendre
-    print("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
+    print_with_time("Waiting %ds (%s). Target: %s"%(time_left,process_name,processes_data['targetip']))
     time.sleep(fabs(time_left))
 
     #creating fake log
@@ -135,13 +136,13 @@ def launch_and_validate_remove(sApi,current_mission,player_data):
     clear_remote_logs(sApi,player_data['local_ip'])
 
 def update_slavelists(sApi):
-    print('Updating slaveslist')
+    print_with_time('Updating slaveslist')
     slaveslist = sApi.slaveslist().replace('\\','')
     slaveslist_content = slaveslist[slaveslist.index('"content":"')+11:-2]
     return json.loads(slaveslist_content)
 
 def validate_mission(mission_id):
-    print('Ending mission %s'%mission_id)
+    print_with_time('Ending mission %s'%mission_id)
     status = sApi.end_mission(mission_id)
     print("\tStatus: %s"%status)
     print('-------------------------')
@@ -206,7 +207,7 @@ def analyze_update(sApi,update_data,player_data,harddrive_data):
                 print('-------------------------')
     harddrive_data['compteur'] += 1
     if harddrive_data['compteur'] > FORMAT_TIMER and harddrive_data['format_harddrive']:
-        print('Suspicious log had been detected. Formating.')
+        print_with_time('Suspicious log had been detected. Formating.')
         sApi.format_harddrive()
         harddrive_data['compteur'] = 0
 
@@ -274,7 +275,7 @@ def get_logs(update_data):
 
 def connect(api,ip,local_ip):
     while True:
-        print('Connecting to %s ...'%ip)
+        print_with_time('Connecting to %s ...'%ip)
         connect_remote = api.connect_remote(ip)
         if 'Love Succs' in connect_remote:
             print('\tDetected "Love Succs", reconnecting to %s'%ip)
@@ -288,7 +289,7 @@ def connect(api,ip,local_ip):
             clear_remote_logs(api,local_ip)
             break
 
-    print('Scanning %s'%ip)
+    print_with_time('Scanning %s'%ip)
     scan = api.scan().replace('\\','')
     scan_result = scan[scan.find('"{"action":"')+12:scan.find('<script>')]
     print('\t%s'%scan_result)
@@ -328,18 +329,18 @@ def process_notifications(sApi,player_data):
     notifications = json.loads(sApi.notifications())
     for notification in notifications['content']:
         if notification['title'] == 'Mission Completed':
-            print(notification['message'])
+            print_with_time(notification['message'])
         elif notification['title'] == 'You Just Leveled Up!':
             new_level = int(notification['message'].split(' ')[2])
             player_data['level'] = new_level
-            print('Level up ! you are now level %s'%new_level)
+            print_with_time('Level up ! you are now level %s'%new_level)
         elif notification['title'] == 'Thanks for Playing!':
-            print(notification['message'])
+            print_with_time(notification['message'])
         elif notification['title'] == 'You Just Prestiged!':
             player_data['level'] = 1
-            print(notification['message'])
+            print_with_time(notification['message'])
         else:
-            print(notification)
+            print_with_time(notification)
 
 def game_loop(sApi,player_data):
     while True:
@@ -358,7 +359,7 @@ def game_loop(sApi,player_data):
 
             #la victime n'est pas dans mes slaves ?
             if not target_is_slave(player_data['npc_slaves'],current_mission['target']):
-                print("Target (%s) is not in slaves list."%current_mission['target'])
+                print_with_time("Target (%s) is not in slaves list."%current_mission['target'])
                 #faire un pulse, attendre et le valider
                 launch_and_validate_pulse(sApi,current_mission)
                 # update la liste des slaves
@@ -374,13 +375,16 @@ def game_loop(sApi,player_data):
             validate_mission(current_mission['id'])
 
             # on quitte la connexion actuelle (remise à l'état initial)
-            print('Exit remote connection (%s)'%current_mission['target'])
+            print_with_time('Exit remote connection (%s)'%current_mission['target'])
             sApi.exit_connection()
             # demande de notifs (client like)
             process_notifications(sApi,player_data)
             # pause de sécurité (pas obligée)
-            print('Pause mission thread for %ds. Reason: antiban'%ANTIBAN_PAUSE)
+            print_with_time('Pause mission thread for %ds. Reason: antiban'%ANTIBAN_PAUSE)
             time.sleep(fabs(ANTIBAN_PAUSE))
+
+def print_with_time(text):
+    print('[%s] %s' % (datetime.now().strftime("%H:%M:%S"), text))
 
 def update_loop(sApi):
     while True:
