@@ -1,5 +1,6 @@
 # Slavehackbot
 Hello, this tool will help you to be rich on Slavehack2.
+Bot is deprecated. New missions have been added. Those missions are not handled (yet?) by the bot.
 
 My favourite use is:
 * Create an account
